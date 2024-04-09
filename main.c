@@ -8,10 +8,16 @@
 /***********************************************************************************/
 
 /*
-  To compile assign2_template-v3.c ensure that gcc is installed and run
-  the following command:
+  To compile and run this program ensure that gcc is installed and run the
+  following commands:
 
-  gcc your_program.c -o your_ass-2 -lpthread -lrt -Wall
+    $ gcc main.c -o ./out/a2 -lpthread -lrt -Wall
+    $ ./out/a2 data.txt output.txt
+
+  If you have `make` installed, you may prefer to run the following instead:
+
+    $ make
+    $ ./out/a2 data.txt output.txt
 */
 
 #include <fcntl.h>
@@ -72,7 +78,13 @@ void *ThreadC(void *params);
 
 /** --- Main code --- */
 int main(int argc, char const *argv[]) {
-  printf("Hello, world!\n");
+  // Verify the data and output file name are provided as arguments.
+  // NOTE: The program executable (`./out/a2`) counts as an argument too, so
+  // `argc` should equal to 3.
+  if (argc != 3) {
+    fprintf(stderr, "USAGE: ./out/a2 data.txt output.txt\n");
+    return 1;
+  }
 
   pthread_t tid[3]; // three threads
   ThreadParams params;
