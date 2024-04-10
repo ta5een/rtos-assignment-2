@@ -36,6 +36,7 @@
 #define SHARED_MEM_SIZE 1024
 
 /* --- Structs --- */
+
 typedef struct ThreadParams {
   int pipeFile[2]; // [0] for read and [1] for write. use pipe for data transfer
                    // from thread A to thread B
@@ -46,10 +47,9 @@ typedef struct ThreadParams {
 } ThreadParams;
 
 /* --- Global variables --- */
+
 int sum = 1;
-
 pthread_attr_t attr;
-
 int shm_fd; // use shared memory for data transfer from thread B to Thread C
 
 /* --- Prototypes --- */
@@ -77,13 +77,14 @@ void *ThreadB(void *params);
 void *ThreadC(void *params);
 
 /** --- Main code --- */
+
 int main(int argc, char const *argv[]) {
   // Verify the data and output file name are provided as arguments.
   // NOTE: The program executable (`./out/a2`) counts as an argument too, so
   // `argc` should equal to 3.
   if (argc != 3) {
     fprintf(stderr, "USAGE: ./out/a2 data.txt output.txt\n");
-    return 1;
+    return -1;
   }
 
   pthread_t tid[3]; // three threads
@@ -94,13 +95,13 @@ int main(int argc, char const *argv[]) {
 
   // Create Threads
   pthread_create(&(tid[0]), &attr, &ThreadA, (void *)(&params));
-
-  // TODO: add your code
+  pthread_create(&(tid[1]), &attr, &ThreadB, (void *)(&params));
+  pthread_create(&(tid[2]), &attr, &ThreadC, (void *)(&params));
 
   // Wait on threads to finish
   pthread_join(tid[0], NULL);
-
-  // TODO: add your code
+  pthread_join(tid[1], NULL);
+  pthread_join(tid[2], NULL);
 
   return 0;
 }
@@ -111,10 +112,12 @@ void initializeData(ThreadParams *params) {
     perror("error for init thread A");
     exit(1);
   }
+
   if (sem_init(&(params->sem_B), 0, 0) != 0) { // Set up Sem for thread B
     perror("error for init thread B");
     exit(1);
   }
+
   if (sem_init(&(params->sem_C), 0, 0) != 0) { // Set up Sem for thread C
     perror("error for init thread C");
     exit(1);
@@ -122,25 +125,60 @@ void initializeData(ThreadParams *params) {
 
   // Initialize thread attributes
   pthread_attr_init(&attr);
+
   // TODO: add your code
 
   return;
 }
 
 void *ThreadA(void *params) {
-  // TODO: add your code
+  // Cast params to `ThreadParams`
+  struct ThreadParams *myParams = params;
+  // Wait for `sem_A` to acquire lock
+  sem_wait(&myParams->sem_A);
 
-  printf("Thread A: sum = %d\n", sum);
+  for (int i = 0; i < 5; i++) {
+    sum = 2 * sum;
+    printf("Thread A: sum = %d\n", sum);
+  }
+
+  // Pass onto `sem_B`
+  sem_post(&myParams->sem_B);
+
+  return NULL;
 }
 
 void *ThreadB(void *params) {
-  // TODO: add your code
+  // Cast params to `ThreadParams`
+  struct ThreadParams *myParams = params;
+  // Wait for `sem_B` to acquire lock
+  sem_wait(&myParams->sem_B);
 
-  printf("Thread B: sum = %d\n", sum);
+  for (int i = 0; i < 3; i++) {
+    sum = 3 * sum;
+    printf("Thread B: sum = %d\n", sum);
+  }
+
+  // Pass onto `sem_C`
+  sem_post(&myParams->sem_C);
+
+  return NULL;
 }
 
 void *ThreadC(void *params) {
-  // TODO: add your code
+  // Cast params to `ThreadParams`
+  struct ThreadParams *myParams = params;
+  // Wait for `sem_C` to acquire lock
+  sem_wait(&myParams->sem_C);
 
-  printf("Thread C: Final sum = %d\n", sum);
+  for (int i = 0; i < 4; i++) {
+    sum = sum - 5;
+    printf("Thread C: Final sum = %d\n", sum);
+  }
+
+  // TODO: Is this call required?
+  // Pass onto `sem_A`
+  // sem_post(&myParams->sem_A);
+
+  return NULL;
 }
