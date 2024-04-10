@@ -40,14 +40,14 @@
 
 /* --- Structs --- */
 
-typedef struct ThreadParams {
-  int pipeFile[2]; // [0] for read and [1] for write. use pipe for data transfer
-                   // from thread A to thread B
+typedef struct thread_params_t {
+  int pipe_file[2]; // [0] for read and [1] for write. use pipe for data
+                    // transfer from thread A to thread B
   sem_t sem_A, sem_B, sem_C; // the semphore
   char message[MESSAGE_LEN];
-  char inputFile[INPUT_FILE_NAME_LEN];   // input file name
-  char outputFile[OUTPUT_FILE_NAME_LEN]; // output file name
-} ThreadParams;
+  char input_file[INPUT_FILE_NAME_LEN];   // input file name
+  char output_file[OUTPUT_FILE_NAME_LEN]; // output file name
+} thread_params_t;
 
 /* --- Global variables --- */
 
@@ -60,7 +60,7 @@ int shm_fd; // use shared memory for data transfer from thread B to Thread C
 /**
  * Initializes data and utilities used in thread params.
  */
-void initializeData(ThreadParams *params);
+void initialize_data(thread_params_t *params);
 
 /**
  * This thread reads data from `data.txt` and writes each line to a pipe
@@ -91,15 +91,15 @@ int main(int argc, char const *argv[]) {
   }
 
   pthread_t tid[3]; // three threads
-  ThreadParams params;
+  thread_params_t params;
 
   // Initialization
   // TODO: Consider setting `inputFile` and `outputFile` in this procedure
-  initializeData(&params);
+  initialize_data(&params);
   // Set the `inputFile` parameter
-  strncpy(params.inputFile, argv[1], INPUT_FILE_NAME_LEN);
+  strncpy(params.input_file, argv[1], INPUT_FILE_NAME_LEN);
   // Set the `outputFile` parameter
-  strncpy(params.outputFile, argv[2], OUTPUT_FILE_NAME_LEN);
+  strncpy(params.output_file, argv[2], OUTPUT_FILE_NAME_LEN);
 
   // Create Threads
   pthread_create(&(tid[0]), &attr, &ThreadA, (void *)(&params));
@@ -114,7 +114,7 @@ int main(int argc, char const *argv[]) {
   return 0;
 }
 
-void initializeData(ThreadParams *params) {
+void initialize_data(thread_params_t *params) {
   // Initialize Sempahores
   if (sem_init(&(params->sem_A), 0, 1) != 0) { // Set up Sem for thread A
     perror("error for init thread A");
@@ -140,10 +140,10 @@ void initializeData(ThreadParams *params) {
 }
 
 void *ThreadA(void *params) {
-  // Cast params to `ThreadParams`
-  struct ThreadParams *myParams = params;
+  // Cast params to `thread_params_t`
+  thread_params_t *my_params = params;
   // Wait for `sem_A` to acquire lock
-  sem_wait(&myParams->sem_A);
+  sem_wait(&my_params->sem_A);
 
   // TODO: Read data file line by line and write to pipe (for ThreadB)
 
@@ -153,16 +153,16 @@ void *ThreadA(void *params) {
   }
 
   // Pass onto `sem_B`
-  sem_post(&myParams->sem_B);
+  sem_post(&my_params->sem_B);
 
   return NULL;
 }
 
 void *ThreadB(void *params) {
-  // Cast params to `ThreadParams`
-  struct ThreadParams *myParams = params;
+  // Cast params to `thread_params_t`
+  thread_params_t *my_params = params;
   // Wait for `sem_B` to acquire lock
-  sem_wait(&myParams->sem_B);
+  sem_wait(&my_params->sem_B);
 
   // TODO: Read from pipe line by line and write to shared memory (for ThreadC)
 
@@ -172,20 +172,20 @@ void *ThreadB(void *params) {
   }
 
   // Pass onto `sem_C`
-  sem_post(&myParams->sem_C);
+  sem_post(&my_params->sem_C);
 
   return NULL;
 }
 
 void *ThreadC(void *params) {
-  // Cast params to `ThreadParams`
-  struct ThreadParams *myParams = params;
+  // Cast params to `thread_params_t`
+  thread_params_t *my_params = params;
   // Wait for `sem_C` to acquire lock
-  sem_wait(&myParams->sem_C);
+  sem_wait(&my_params->sem_C);
 
   // TODO: Read from shared memory line by line
   // TODO: Set flag to determine if reading from File Header or Content Region
-  // TODO: If reading from Content Region, write to `&myParams->outputFile`
+  // TODO: If reading from Content Region, write to `&my_params->outputFile`
 
   for (int i = 0; i < 4; i++) {
     sum = sum - 5;
@@ -194,7 +194,7 @@ void *ThreadC(void *params) {
 
   // TODO: Is this call required?
   // Pass onto `sem_A`
-  // sem_post(&myParams->sem_A);
+  // sem_post(&my_params->sem_A);
 
   return NULL;
 }
