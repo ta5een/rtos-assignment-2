@@ -87,7 +87,7 @@ int main(int argc, char const *argv[]) {
   // `argc` should equal to 3.
   if (argc != 3) {
     fprintf(stderr, "USAGE: ./out/a2 data.txt output.txt\n");
-    return -1;
+    return EXIT_FAILURE;
   }
 
   pthread_t tid[3]; // three threads
@@ -111,24 +111,24 @@ int main(int argc, char const *argv[]) {
   pthread_join(tid[1], NULL);
   pthread_join(tid[2], NULL);
 
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 void initialize_data(thread_params_t *params) {
   // Initialize Sempahores
   if (sem_init(&(params->sem_A), 0, 1) != 0) { // Set up Sem for thread A
     perror("error for init thread A");
-    exit(1);
+    exit(EXIT_FAILURE);
   }
 
   if (sem_init(&(params->sem_B), 0, 0) != 0) { // Set up Sem for thread B
     perror("error for init thread B");
-    exit(1);
+    exit(EXIT_FAILURE);
   }
 
   if (sem_init(&(params->sem_C), 0, 0) != 0) { // Set up Sem for thread C
     perror("error for init thread C");
-    exit(1);
+    exit(EXIT_FAILURE);
   }
 
   // Initialize thread attributes
