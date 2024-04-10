@@ -38,6 +38,8 @@
 #define INPUT_FILE_NAME_LEN 100
 #define OUTPUT_FILE_NAME_LEN 100
 
+#define DEBUG 1
+
 /* --- Structs --- */
 
 typedef struct thread_params_t {
@@ -79,7 +81,7 @@ void *ThreadB(void *params);
  */
 void *ThreadC(void *params);
 
-/** --- Main code --- */
+/* --- Main code --- */
 
 int main(int argc, char const *argv[]) {
   // Verify the data and output file name are provided as arguments.
@@ -134,7 +136,12 @@ void initialize_data(thread_params_t *params, char const *argv[]) {
   // Initialize thread attributes
   pthread_attr_init(&attr);
 
-  // TODO: add your code
+  // Initialize the pipe
+  int pipe_result = pipe(params->pipe_file);
+  if (pipe_result < 0) {
+    perror("Failed to pipe");
+    exit(EXIT_FAILURE);
+  }
 
   return;
 }
@@ -145,13 +152,36 @@ void *ThreadA(void *params) {
   // Wait for `sem_A` to acquire lock
   sem_wait(&my_params->sem_A);
 
-  // TODO: Read data file line by line and write to pipe (for ThreadB)
+  FILE *data_file_ptr;  // Data file
+  char write_data[100]; // Current line of file to write to pipe
+
+  if ((data_file_ptr = fopen(my_params->input_file, "r")) == NULL) {
+    perror("Failed to read file");
+    exit(EXIT_FAILURE);
+  }
+
+  // Read data file line by line and write to pipe (for ThreadB)
+  while (fgets(write_data, sizeof(write_data), data_file_ptr) != NULL) {
+#if DEBUG
+    printf("[A] SEND: «%s»\n", write_data);
+#endif
+    int r = write(my_params->pipe_file[1], write_data, strlen(write_data));
+    if (r < 0) {
+      perror("Failed to write to pipe");
+      exit(EXIT_FAILURE);
+    }
+  }
+
+  // Close the pipe after finishing writing to it
+  close(my_params->pipe_file[1]);
 
   for (int i = 0; i < 5; i++) {
     sum = 2 * sum;
     printf("Thread A: sum = %d\n", sum);
   }
 
+  // Close the file
+  fclose(data_file_ptr);
   // Pass onto `sem_B`
   sem_post(&my_params->sem_B);
 
@@ -164,12 +194,32 @@ void *ThreadB(void *params) {
   // Wait for `sem_B` to acquire lock
   sem_wait(&my_params->sem_B);
 
-  // TODO: Read from pipe line by line and write to shared memory (for ThreadC)
+  // Current buffer of text read from the pipe (from ThreadA)
+  // NOTE: This is NOT guaranteed to hold a single line of text as only a 100
+  // characters will be read on each loop.
+  char read_data[100];
+  int result;
+
+  // Continuously read from pipe and write to shared memory (for ThreadC)
+  do {
+    result = read(my_params->pipe_file[0], read_data, sizeof(read_data));
+    // TODO: Write to shared memory
+#if DEBUG
+    printf("[B] RECV: «%s»\n", read_data);
+#endif
+    if (result < 0) {
+      perror("Failed to read from pipe");
+      exit(EXIT_FAILURE);
+    }
+  } while (result > 0);
 
   for (int i = 0; i < 3; i++) {
     sum = 3 * sum;
     printf("Thread B: sum = %d\n", sum);
   }
+
+  // TODO: Is this call required?
+  // close(my_params->pipe_file[0]);
 
   // Pass onto `sem_C`
   sem_post(&my_params->sem_C);
