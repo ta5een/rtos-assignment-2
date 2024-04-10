@@ -34,6 +34,9 @@
 /* To be used for your memory allocation, write/read. man mmsp */
 #define SHARED_MEM_NAME "/my_shared_memory"
 #define SHARED_MEM_SIZE 1024
+#define MESSAGE_LEN 255
+#define INPUT_FILE_NAME_LEN 100
+#define OUTPUT_FILE_NAME_LEN 100
 
 /* --- Structs --- */
 
@@ -41,9 +44,9 @@ typedef struct ThreadParams {
   int pipeFile[2]; // [0] for read and [1] for write. use pipe for data transfer
                    // from thread A to thread B
   sem_t sem_A, sem_B, sem_C; // the semphore
-  char message[255];
-  char inputFile[100];  // input file name
-  char outputFile[100]; // output file name
+  char message[MESSAGE_LEN];
+  char inputFile[INPUT_FILE_NAME_LEN];   // input file name
+  char outputFile[OUTPUT_FILE_NAME_LEN]; // output file name
 } ThreadParams;
 
 /* --- Global variables --- */
@@ -91,7 +94,12 @@ int main(int argc, char const *argv[]) {
   ThreadParams params;
 
   // Initialization
+  // TODO: Consider setting `inputFile` and `outputFile` in this procedure
   initializeData(&params);
+  // Set the `inputFile` parameter
+  strncpy(params.inputFile, argv[1], INPUT_FILE_NAME_LEN);
+  // Set the `outputFile` parameter
+  strncpy(params.outputFile, argv[2], OUTPUT_FILE_NAME_LEN);
 
   // Create Threads
   pthread_create(&(tid[0]), &attr, &ThreadA, (void *)(&params));
