@@ -145,6 +145,8 @@ void *ThreadA(void *params) {
   // Wait for `sem_A` to acquire lock
   sem_wait(&myParams->sem_A);
 
+  // TODO: Read data file line by line and write to pipe (for ThreadB)
+
   for (int i = 0; i < 5; i++) {
     sum = 2 * sum;
     printf("Thread A: sum = %d\n", sum);
@@ -162,6 +164,8 @@ void *ThreadB(void *params) {
   // Wait for `sem_B` to acquire lock
   sem_wait(&myParams->sem_B);
 
+  // TODO: Read from pipe line by line and write to shared memory (for ThreadC)
+
   for (int i = 0; i < 3; i++) {
     sum = 3 * sum;
     printf("Thread B: sum = %d\n", sum);
@@ -178,6 +182,10 @@ void *ThreadC(void *params) {
   struct ThreadParams *myParams = params;
   // Wait for `sem_C` to acquire lock
   sem_wait(&myParams->sem_C);
+
+  // TODO: Read from shared memory line by line
+  // TODO: Set flag to determine if reading from File Header or Content Region
+  // TODO: If reading from Content Region, write to `&myParams->outputFile`
 
   for (int i = 0; i < 4; i++) {
     sum = sum - 5;
