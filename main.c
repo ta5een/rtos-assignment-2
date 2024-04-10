@@ -60,7 +60,7 @@ int shm_fd; // use shared memory for data transfer from thread B to Thread C
 /**
  * Initializes data and utilities used in thread params.
  */
-void initialize_data(thread_params_t *params);
+void initialize_data(thread_params_t *params, char const *argv[]);
 
 /**
  * This thread reads data from `data.txt` and writes each line to a pipe
@@ -94,12 +94,7 @@ int main(int argc, char const *argv[]) {
   thread_params_t params;
 
   // Initialization
-  // TODO: Consider setting `inputFile` and `outputFile` in this procedure
-  initialize_data(&params);
-  // Set the `inputFile` parameter
-  strncpy(params.input_file, argv[1], INPUT_FILE_NAME_LEN);
-  // Set the `outputFile` parameter
-  strncpy(params.output_file, argv[2], OUTPUT_FILE_NAME_LEN);
+  initialize_data(&params, argv);
 
   // Create Threads
   pthread_create(&(tid[0]), &attr, &ThreadA, (void *)(&params));
@@ -114,7 +109,12 @@ int main(int argc, char const *argv[]) {
   return EXIT_SUCCESS;
 }
 
-void initialize_data(thread_params_t *params) {
+void initialize_data(thread_params_t *params, char const *argv[]) {
+  // Set the `input_file` parameter
+  strncpy(params->input_file, argv[1], INPUT_FILE_NAME_LEN);
+  // Set the `output_file` parameter
+  strncpy(params->output_file, argv[2], OUTPUT_FILE_NAME_LEN);
+
   // Initialize Sempahores
   if (sem_init(&(params->sem_A), 0, 1) != 0) { // Set up Sem for thread A
     perror("error for init thread A");
