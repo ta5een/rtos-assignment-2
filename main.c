@@ -37,7 +37,7 @@
 #define SHARED_MEM_SIZE 1024
 
 /** Set to 1 to turn on DEBUG, otherwise set to 0. */
-#define DEBUG 1
+#define DEBUG 0
 /** The maximum string length of the message to pass by shared memory. */
 #define MESSAGE_LEN 255
 /** The maximum string length of the input file name. */
