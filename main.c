@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h> // TODO: This was not part of the template
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -202,20 +203,43 @@ void *ThreadB(void *params) {
   // NOTE: This is NOT guaranteed to hold a single line of text as only a 100
   // characters will be read on each loop.
   char read_data[100];
-  int result;
+  ssize_t read_len;
+
+  // Create and open a new shared memory object
+  shm_fd = shm_open(SHARED_MEM_NAME, O_CREAT | O_RDWR, 0666);
+  // Configure the size of the shared memory object
+  ftruncate(shm_fd, SHARED_MEM_SIZE);
+  // Create a new mapping of the shared memory object in virtual address space
+  void *shm_ptr = mmap(0, SHARED_MEM_SIZE, PROT_WRITE, MAP_SHARED, shm_fd, 0);
 
   // Continuously read from pipe and write to shared memory (for ThreadC)
   do {
-    result = read(my_params->pipe_file[0], read_data, sizeof(read_data));
-    // TODO: Write to shared memory
-#if DEBUG
-    printf("[B] RECV: «%s»\n", read_data);
-#endif
-    if (result < 0) {
+    // Read the message from the pipe (from ThreadA)
+    read_len = read(my_params->pipe_file[0], read_data, sizeof(read_data));
+    if (read_len < 0) {
       perror("Failed to read from pipe");
       exit(EXIT_FAILURE);
+    } else if (read_len == 0) {
+      // Fail-safe in case there was no message in the pipe to begin with
+      break;
     }
-  } while (result > 0);
+
+    // Since the length of `read_data` is currently equal to its capacity (100),
+    // the resulting string will either be fully replaced if 100 characters are
+    // read, or will be partially replaced in the case of the last iteration.
+    // To ensure the string is properly terminated, we will manually place a
+    // NULL terminator here.
+    read_data[read_len] = '\0';
+#if DEBUG
+    printf("[B] RECV: {%zd} «%s»\n", read_len, read_data);
+#endif
+
+    // Append the data from the pipe to the shared memory pointer
+    sprintf(shm_ptr + strlen(shm_ptr), "%s", read_data);
+#if DEBUG
+    printf("[B] Write to shared memory object: «%s»\n", (char *)shm_ptr);
+#endif
+  } while (read_len > 0);
 
   for (int i = 0; i < 3; i++) {
     sum = 3 * sum;
@@ -237,7 +261,12 @@ void *ThreadC(void *params) {
   // Wait for `sem_C` to acquire lock
   sem_wait(&my_params->sem_C);
 
-  // TODO: Read from shared memory line by line
+  // Create a new mapping of the shared memory object in virtual address space
+  void *shm_ptr = mmap(0, SHARED_MEM_SIZE, PROT_READ, MAP_SHARED, shm_fd, 0);
+#if DEBUG
+  printf("[C] Read from shared memory object: «%s»\n", (char *)shm_ptr);
+#endif
+
   // TODO: Set flag to determine if reading from File Header or Content Region
   // TODO: If reading from Content Region, write to `&my_params->outputFile`
 
@@ -245,6 +274,9 @@ void *ThreadC(void *params) {
     sum = sum - 5;
     printf("Thread C: Final sum = %d\n", sum);
   }
+
+  // Unlink shared memory
+  shm_unlink(SHARED_MEM_NAME);
 
   // TODO: Is this call required?
   // Pass onto `sem_A`
