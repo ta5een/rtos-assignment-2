@@ -172,7 +172,7 @@ void *ThreadA(void *params) {
   // Read data file line by line and write to pipe (for ThreadB)
   while (fgets(write_data, sizeof(write_data), data_file_ptr) != NULL) {
 #if DEBUG
-    printf("[A] SEND: «%s»\n", write_data);
+    printf("[A] Write to pipe: %s", write_data);
 #endif
     int r = write(my_params->pipe_file[1], write_data, strlen(write_data));
     if (r < 0) {
@@ -207,6 +207,8 @@ void *ThreadB(void *params) {
   // NOTE: This is NOT guaranteed to hold a single line of text as only a 100
   // characters will be read on each loop.
   char read_data[100];
+  // The length of the string read from the pipe. This may be negative if the
+  // `read()` call fails.
   ssize_t read_len;
 
   // Create and open a new shared memory object
@@ -223,8 +225,13 @@ void *ThreadB(void *params) {
     if (read_len < 0) {
       perror("Failed to read from pipe");
       exit(EXIT_FAILURE);
-    } else if (read_len == 0) {
-      // Fail-safe in case there was no message in the pipe to begin with
+    }
+
+    // Fail-safe in case there was no message in the pipe to begin with
+    if (read_len == 0) {
+#if DEBUG
+      printf("[B] End of message from pipe\n");
+#endif
       break;
     }
 
@@ -235,14 +242,11 @@ void *ThreadB(void *params) {
     // NULL terminator here.
     read_data[read_len] = '\0';
 #if DEBUG
-    printf("[B] RECV: {%zd} «%s»\n", read_len, read_data);
+    printf("[B] Read from pipe (%zd bytes):\n%s\n", read_len, read_data);
 #endif
 
     // Append the data from the pipe to the shared memory pointer
     sprintf(shm_ptr + strlen(shm_ptr), "%s", read_data);
-#if DEBUG
-    printf("[B] Write to shared memory object: «%s»\n", (char *)shm_ptr);
-#endif
   } while (read_len > 0);
 
   for (int i = 0; i < 3; i++) {
@@ -268,7 +272,7 @@ void *ThreadC(void *params) {
   // Create a new mapping of the shared memory object in virtual address space
   void *shm_ptr = mmap(0, SHARED_MEM_SIZE, PROT_READ, MAP_SHARED, shm_fd, 0);
 #if DEBUG
-  printf("[C] Read from shared memory object: «%s»\n", (char *)shm_ptr);
+  printf("[C] Read from shared memory object:\n%s\n", (char *)shm_ptr);
 #endif
 
   // Look for `END_HEADER_SUBSTRING` to know where the Content Region starts
@@ -276,13 +280,13 @@ void *ThreadC(void *params) {
   if (end_header_offset == NULL) {
     // Abort the program if no `END_HEADER_SUBSTRING` is found - the data file
     // may be malformed or does not follow the expected structure
-    fprintf(stderr, "Header is not present in provided data file\n");
+    fprintf(stderr, "Header is not present in the provided data file\n");
     exit(EXIT_FAILURE);
   }
 
   char *content_region_offset = end_header_offset + END_HEADER_SUBSTRING_LEN;
 #if DEBUG
-  printf("[C] Content region: «%s»\n", content_region_offset);
+  printf("[C] Content region:\n%s\n", content_region_offset);
 #endif
 
   FILE *output_file_ptr; // Data file
