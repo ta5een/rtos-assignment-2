@@ -44,6 +44,10 @@
 #define INPUT_FILE_NAME_LEN 100
 /** The maximum string length of the output file name. */
 #define OUTPUT_FILE_NAME_LEN 100
+/** The substring to match that indicates the end of the File Header Region. */
+#define END_HEADER_SUBSTRING "end_header\n"
+/** The substring length of `END_HEADER_SUBSTRING`. */
+#define END_HEADER_SUBSTRING_LEN strlen(END_HEADER_SUBSTRING)
 
 /* --- Structs --- */
 
@@ -161,7 +165,7 @@ void *ThreadA(void *params) {
   char write_data[100]; // Current line of file to write to pipe
 
   if ((data_file_ptr = fopen(my_params->input_file, "r")) == NULL) {
-    perror("Failed to read file");
+    perror("Failed to open data file");
     exit(EXIT_FAILURE);
   }
 
@@ -267,8 +271,33 @@ void *ThreadC(void *params) {
   printf("[C] Read from shared memory object: «%s»\n", (char *)shm_ptr);
 #endif
 
-  // TODO: Set flag to determine if reading from File Header or Content Region
-  // TODO: If reading from Content Region, write to `&my_params->outputFile`
+  // Look for `END_HEADER_SUBSTRING` to know where the Content Region starts
+  char *end_header_offset = strstr((char *)shm_ptr, END_HEADER_SUBSTRING);
+  if (end_header_offset == NULL) {
+    // Abort the program if no `END_HEADER_SUBSTRING` is found - the data file
+    // may be malformed or does not follow the expected structure
+    fprintf(stderr, "Header is not present in provided data file\n");
+    exit(EXIT_FAILURE);
+  }
+
+  char *content_region_offset = end_header_offset + END_HEADER_SUBSTRING_LEN;
+#if DEBUG
+  printf("[C] Content region: «%s»\n", content_region_offset);
+#endif
+
+  FILE *output_file_ptr; // Data file
+  if ((output_file_ptr = fopen(my_params->output_file, "w")) == NULL) {
+    perror("Failed to create/open output file");
+    exit(EXIT_FAILURE);
+  }
+
+  // Write the Content Region to the output file. The file contents will be
+  // replaced.
+  int bytes_written = fprintf(output_file_ptr, "%s", content_region_offset);
+#if DEBUG
+  printf("[C] Successfully wrote %d bytes to '%s'\n", bytes_written,
+         my_params->output_file);
+#endif
 
   for (int i = 0; i < 4; i++) {
     sum = sum - 5;
@@ -280,7 +309,7 @@ void *ThreadC(void *params) {
 
   // TODO: Is this call required?
   // Pass onto `sem_A`
-  // sem_post(&my_params->sem_A);
+  sem_post(&my_params->sem_A);
 
   return NULL;
 }
