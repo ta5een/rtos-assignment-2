@@ -51,6 +51,7 @@
 
 /* --- Structs --- */
 
+// TODO: Is it okay to convert this (and field members) to snake case?
 typedef struct thread_params_t {
   int pipe_file[2]; // [0] for read and [1] for write. use pipe for data
                     // transfer from thread A to thread B
@@ -70,6 +71,8 @@ int shm_fd; // use shared memory for data transfer from thread B to Thread C
 
 /**
  * Initializes data and utilities used in thread params.
+ * TODO: Is it okay to change this procedure's signature?
+ * TODO: Is it okay to convert this to snake case?
  */
 void initialize_data(thread_params_t *params, char const *argv[]);
 
@@ -164,6 +167,7 @@ void *ThreadA(void *params) {
   FILE *data_file_ptr;  // Data file
   char write_data[100]; // Current line of file to write to pipe
 
+  // Attempt to open the data file
   if ((data_file_ptr = fopen(my_params->input_file, "r")) == NULL) {
     perror("Failed to open data file");
     exit(EXIT_FAILURE);
