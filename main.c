@@ -34,11 +34,15 @@
 /* To be used for your memory allocation, write/read. man mmsp */
 #define SHARED_MEM_NAME "/my_shared_memory"
 #define SHARED_MEM_SIZE 1024
-#define MESSAGE_LEN 255
-#define INPUT_FILE_NAME_LEN 100
-#define OUTPUT_FILE_NAME_LEN 100
 
+/** Set to 1 to turn on DEBUG, otherwise set to 0. */
 #define DEBUG 1
+/** The maximum string length of the message to pass by shared memory. */
+#define MESSAGE_LEN 255
+/** The maximum string length of the input file name. */
+#define INPUT_FILE_NAME_LEN 100
+/** The maximum string length of the output file name. */
+#define OUTPUT_FILE_NAME_LEN 100
 
 /* --- Structs --- */
 
