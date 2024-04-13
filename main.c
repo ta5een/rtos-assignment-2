@@ -166,6 +166,7 @@ void *ThreadA(void *params) {
 
   FILE *data_file_ptr;  // Data file
   char write_data[100]; // Current line of file to write to pipe
+  ssize_t write_len;    // The length of the current line written to the pipe
 
   // Attempt to open the data file
   if ((data_file_ptr = fopen(my_params->input_file, "r")) == NULL) {
@@ -178,14 +179,14 @@ void *ThreadA(void *params) {
 #if DEBUG
     printf("[A] Write to pipe: %s", write_data);
 #endif
-    int r = write(my_params->pipe_file[1], write_data, strlen(write_data));
-    if (r < 0) {
+    write_len = write(my_params->pipe_file[1], write_data, strlen(write_data));
+    if (write_len < 0) {
       perror("Failed to write to pipe");
       exit(EXIT_FAILURE);
     }
   }
 
-  // Close the pipe after finishing writing to it
+  // Close the pipe after writing to it
   close(my_params->pipe_file[1]);
 
   for (int i = 0; i < 5; i++) {
@@ -242,8 +243,8 @@ void *ThreadB(void *params) {
     // Since the length of `read_data` is currently equal to its capacity (100),
     // the resulting string will either be fully replaced if 100 characters are
     // read, or will be partially replaced in the case of the last iteration.
-    // To ensure the string is properly terminated, we will manually place a
-    // NULL terminator here.
+    // To ensure the string is properly terminated, a NULL terminator will be
+    // manually placed here.
     read_data[read_len] = '\0';
 #if DEBUG
     printf("[B] Read from pipe (%zd bytes):\n%s\n", read_len, read_data);
@@ -284,7 +285,7 @@ void *ThreadC(void *params) {
   if (end_header_offset == NULL) {
     // Abort the program if no `END_HEADER_SUBSTRING` is found - the data file
     // may be malformed or does not follow the expected structure
-    fprintf(stderr, "Header is not present in the provided data file\n");
+    fprintf(stderr, "File Header is not present in the provided data file\n");
     exit(EXIT_FAILURE);
   }
 
@@ -293,7 +294,7 @@ void *ThreadC(void *params) {
   printf("[C] Content region:\n%s\n", content_region_offset);
 #endif
 
-  FILE *output_file_ptr; // Data file
+  FILE *output_file_ptr; // Output file
   if ((output_file_ptr = fopen(my_params->output_file, "w")) == NULL) {
     perror("Failed to create/open output file");
     exit(EXIT_FAILURE);
