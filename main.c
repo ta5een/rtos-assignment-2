@@ -71,10 +71,9 @@ int shm_fd; // use shared memory for data transfer from thread B to Thread C
 
 /**
  * Initializes data and utilities used in thread params.
- * TODO: Is it okay to change this procedure's signature?
  * TODO: Is it okay to convert this to snake case?
  */
-void initialize_data(thread_params_t *params, char const *argv[]);
+void initialize_data(thread_params_t *params);
 
 /**
  * This thread reads data from `data.txt` and writes each line to a pipe
@@ -108,7 +107,11 @@ int main(int argc, char const *argv[]) {
   thread_params_t params;
 
   // Initialization
-  initialize_data(&params, argv);
+  initialize_data(&params);
+  // Set the `input_file` parameter
+  strncpy(params.input_file, argv[1], INPUT_FILE_NAME_LEN);
+  // Set the `output_file` parameter
+  strncpy(params.output_file, argv[2], OUTPUT_FILE_NAME_LEN);
 
   // Create Threads
   pthread_create(&(tid[0]), &attr, &ThreadA, (void *)(&params));
@@ -123,12 +126,7 @@ int main(int argc, char const *argv[]) {
   return EXIT_SUCCESS;
 }
 
-void initialize_data(thread_params_t *params, char const *argv[]) {
-  // Set the `input_file` parameter
-  strncpy(params->input_file, argv[1], INPUT_FILE_NAME_LEN);
-  // Set the `output_file` parameter
-  strncpy(params->output_file, argv[2], OUTPUT_FILE_NAME_LEN);
-
+void initialize_data(thread_params_t *params) {
   // Initialize Sempahores
   if (sem_init(&(params->sem_A), 0, 1) != 0) { // Set up Sem for thread A
     perror("error for init thread A");
