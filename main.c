@@ -88,7 +88,7 @@ void *ThreadB(void *params);
 
 /**
  * This thread reads from shared variable and outputs non-header text to
- * `src.txt`.
+ * src.txt.
  */
 void *ThreadC(void *params);
 
@@ -257,6 +257,7 @@ void *ThreadB(void *params) {
     printf("Thread B: sum = %d\n", sum);
   }
 
+  // Close pipe
   // TODO: Is this call required?
   // close(my_params->pipe_file[0]);
 
@@ -304,6 +305,10 @@ void *ThreadC(void *params) {
 #if DEBUG
   printf("[C] Successfully wrote %d bytes to '%s'\n", bytes_written,
          my_params->output_file);
+#else
+  // This is a no-op. The purpose of this line is to supress GCC from issuing an
+  // "unused variable" warning when `DEBUG` is false.
+  (void)bytes_written;
 #endif
 
   for (int i = 0; i < 4; i++) {
@@ -314,7 +319,6 @@ void *ThreadC(void *params) {
   // Unlink shared memory
   shm_unlink(SHARED_MEM_NAME);
 
-  // TODO: Is this call required?
   // Pass onto `sem_A`
   sem_post(&my_params->sem_A);
 
