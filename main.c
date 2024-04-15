@@ -113,10 +113,23 @@ int main(int argc, char const *argv[]) {
   // Set the `output_file` parameter
   strncpy(params.output_file, argv[2], OUTPUT_FILE_NAME_LEN);
 
-  // Create Threads
-  pthread_create(&(tid[0]), &attr, &ThreadA, (void *)(&params));
-  pthread_create(&(tid[1]), &attr, &ThreadB, (void *)(&params));
-  pthread_create(&(tid[2]), &attr, &ThreadC, (void *)(&params));
+  // Create Thread A
+  if (pthread_create(&(tid[0]), &attr, &ThreadA, (void *)(&params)) != 0) {
+    perror("Failed to create Thread A");
+    exit(EXIT_FAILURE);
+  }
+
+  // Create Thread B
+  if (pthread_create(&(tid[1]), &attr, &ThreadB, (void *)(&params)) != 0) {
+    perror("Failed to create Thread B");
+    exit(EXIT_FAILURE);
+  }
+
+  // Create Thread C
+  if (pthread_create(&(tid[2]), &attr, &ThreadC, (void *)(&params)) != 0) {
+    perror("Failed to create Thread C");
+    exit(EXIT_FAILURE);
+  }
 
   // Wait on threads to finish
   pthread_join(tid[0], NULL);
